@@ -1,1 +1,2152 @@
-it is based on the ai smart health
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Health Risk Predictor & Smart Hospital Triage</title>
+    
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS (for the map) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* ALL YOUR EXISTING STYLES REMAIN EXACTLY THE SAME */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+            --white: #ffffff;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            
+            --sidebar-width: 280px;
+            --header-height: 80px;
+            --footer-height: 100px;
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* ===== SIDEBAR STYLES ===== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--white);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header h2 i {
+            font-size: 2rem;
+        }
+
+        .sidebar-header p {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin-top: 5px;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: var(--gray-600);
+            text-decoration: none;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-100);
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--gray-100);
+            border-left-color: var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            width: 20px;
+            font-size: 1.1rem;
+        }
+
+        .nav-section {
+            padding: 16px 24px 8px;
+            color: var(--gray-400);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ===== MAIN CONTENT AREA ===== */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== HEADER STYLES ===== */
+        .header {
+            height: var(--header-height);
+            background: var(--white);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+
+        .header-left h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .header-left h1 span {
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 400;
+            margin-left: 10px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .language-selector {
+            position: relative;
+        }
+
+        .language-selector select {
+            padding: 8px 30px 8px 15px;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            background: var(--white);
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            cursor: pointer;
+            appearance: none;
+        }
+
+        .language-selector::after {
+            content: '\f107';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+            pointer-events: none;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background: var(--gray-100);
+        }
+
+        /* ===== CONTENT WRAPPER ===== */
+        .content-wrapper {
+            flex: 1;
+            padding: 30px;
+            background: var(--gray-100);
+        }
+
+        /* ===== SYMPTOM INPUT SECTION ===== */
+        .symptom-section {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        .input-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .symptom-input {
+            width: 100%;
+            padding: 16px 50px 16px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .symptom-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+
+        .voice-input-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .voice-input-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .voice-input-btn.listening {
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--gray-700);
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .action-btn:hover {
+            background: var(--gray-100);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .action-btn i {
+            font-size: 1rem;
+        }
+
+        /* ===== RISK DASHBOARD ===== */
+        .risk-dashboard {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .risk-card {
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+
+        .risk-card.low {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .risk-card.moderate {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .risk-card.high {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .risk-card.total {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .risk-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .risk-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .risk-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* ===== AI RESULTS SECTION ===== */
+        .ai-results {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .loading-container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--gray-600);
+            font-size: 1rem;
+        }
+
+        .results-container {
+            display: none;
+        }
+
+        .conditions-section {
+            margin: 20px 0;
+        }
+
+        .condition-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--gray-200);
+            gap: 15px;
+        }
+
+        .condition-item:last-child {
+            border-bottom: none;
+        }
+
+        .condition-info {
+            flex: 1;
+        }
+
+        .condition-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .condition-symptoms {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .confidence-bar {
+            width: 150px;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .confidence-fill.high { background: var(--danger); }
+        .confidence-fill.medium { background: var(--warning); }
+        .confidence-fill.low { background: var(--secondary); }
+
+        .confidence-value {
+            min-width: 60px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .risk-meter-container {
+            margin: 25px 0;
+            padding: 20px;
+            background: var(--gray-100);
+            border-radius: var(--border-radius);
+        }
+
+        .risk-meter-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .risk-meter-bar {
+            height: 20px;
+            background: var(--gray-200);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .risk-meter-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .emergency-alert {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid var(--danger);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .emergency-alert i {
+            font-size: 2rem;
+            color: var(--danger);
+            margin-bottom: 10px;
+        }
+
+        .emergency-alert h3 {
+            color: var(--danger);
+            margin-bottom: 10px;
+        }
+
+        .specialist-box {
+            background: var(--gray-100);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .recommendations-box {
+            background: var(--gray-100);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .recommendations-box ul {
+            margin-top: 10px;
+            padding-left: 25px;
+        }
+
+        .recommendations-box li {
+            margin: 8px 0;
+        }
+
+        .disclaimer-box {
+            background: #fee2e2;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 0.875rem;
+            color: #991b1b;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .no-results i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* ===== TRIAGE SECTION ===== */
+        .triage-section {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .triage-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .triage-card {
+            padding: 20px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .triage-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .triage-card.emergency {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-color: var(--danger);
+        }
+
+        .triage-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .triage-icon i {
+            font-size: 2.5rem;
+        }
+
+        .triage-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .triage-desc {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .triage-card.recommended {
+            transform: scale(1.02);
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+
+        /* ===== MAP SECTION ===== */
+        .map-section {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .map-container {
+            height: 300px;
+            background: var(--gray-200);
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .hospital-list {
+            margin-top: 20px;
+        }
+
+        .hospital-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--gray-200);
+            gap: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .hospital-item:hover {
+            background: var(--gray-100);
+        }
+
+        .hospital-item:last-child {
+            border-bottom: none;
+        }
+
+        .hospital-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gray-100);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .hospital-info {
+            flex: 1;
+        }
+
+        .hospital-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .hospital-address {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .hospital-distance {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .hospital-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-open {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-busy {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            height: var(--footer-height);
+            background: var(--white);
+            border-top: 1px solid var(--gray-200);
+            padding: 20px 30px;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .emergency-contact {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .emergency-badge {
+            padding: 8px 16px;
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .help-line {
+            padding: 8px 16px;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-links a {
+            color: var(--gray-500);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .copyright {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+        }
+
+        /* ===== MODAL STYLES ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: var(--gray-100);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--gray-200);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--gray-300);
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: var(--gray-100);
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        /* ===== NOTIFICATION ===== */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--white);
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid var(--primary);
+            max-width: 350px;
+        }
+        
+        .notification.success { border-left-color: var(--secondary); }
+        .notification.error { border-left-color: var(--danger); }
+        .notification.warning { border-left-color: var(--warning); }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 1024px) {
+            .risk-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .triage-options {
+                grid-template-columns: repeat(1, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .header {
+                padding: 0 15px;
+            }
+            
+            .header-left h1 span {
+                display: none;
+            }
+            
+            .content-wrapper {
+                padding: 15px;
+            }
+            
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .condition-item {
+                flex-wrap: wrap;
+            }
+            
+            .confidence-bar {
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+
+        /* Debug panel - new */
+        .debug-panel {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>
+                    <i class="fas fa-heartbeat"></i>
+                    AI Health
+                </h2>
+                <p>Smart Hospital Triage System</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">Main Menu</div>
+                <div class="nav-item active" onclick="showSection('dashboard')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="showSection('checker')">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>Symptom Checker</span>
+                </div>
+                <div class="nav-item" onclick="showSection('reports')">
+                    <i class="fas fa-file-medical"></i>
+                    <span>My Reports</span>
+                </div>
+                <div class="nav-item" onclick="showSection('hospitals')">
+                    <i class="fas fa-hospital"></i>
+                    <span>Hospitals</span>
+                </div>
+                <div class="nav-item" onclick="showSection('medications')">
+                    <i class="fas fa-pills"></i>
+                    <span>Medications</span>
+                </div>
+                
+                <div class="nav-section">Personal</div>
+                <div class="nav-item" onclick="showSection('profile')">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </div>
+                <div class="nav-item" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </div>
+                <div class="nav-item" onclick="showSection('help')">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help & Support</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>
+                        AI Health Risk Predictor
+                        <span>with Gemini AI & RapidAPI</span>
+                    </h1>
+                </div>
+                
+                <div class="header-right">
+                    <div class="language-selector">
+                        <select id="languageSelect">
+                            <option value="en">🇺🇸 English</option>
+                            <option value="te">🇮🇳 Telugu</option>
+                            <option value="hi">🇮🇳 Hindi</option>
+                        </select>
+                    </div>
+                    
+                    <div class="user-menu">
+                        <div class="theme-toggle" id="themeToggle">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <div class="user-avatar">
+                            <span>U</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Wrapper -->
+            <div class="content-wrapper">
+                <!-- Symptom Input Section -->
+                <section class="symptom-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-notes-medical"></i>
+                        Describe Your Symptoms
+                    </h2>
+                    
+                    <div class="input-container">
+                        <textarea 
+                            class="symptom-input" 
+                            id="symptomInput"
+                            placeholder="Example: I have severe headache, fever of 102°F, and body aches for 2 days..."
+                        >I have severe headache and fever for 2 days</textarea>
+                        <button class="voice-input-btn" id="voiceInputBtn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn" id="analyzeBtn">
+                            <i class="fas fa-robot"></i>
+                            Analyze with AI
+                        </button>
+                        <button class="action-btn" id="uploadReportBtn">
+                            <i class="fas fa-upload"></i>
+                            Upload Reports
+                        </button>
+                        <button class="action-btn" id="connectWearableBtn">
+                            <i class="fas fa-heart"></i>
+                            Connect Wearable
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Risk Dashboard -->
+                <section class="risk-dashboard">
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        Risk Assessment Dashboard
+                    </h2>
+                    
+                    <div class="risk-grid" id="riskGrid">
+                        <div class="risk-card low">
+                            <div class="risk-icon">
+                                <i class="fas fa-smile"></i>
+                            </div>
+                            <div class="risk-value" id="lowRiskCount">0</div>
+                            <div class="risk-label">Low Risk</div>
+                        </div>
+                        
+                        <div class="risk-card moderate">
+                            <div class="risk-icon">
+                                <i class="fas fa-meh"></i>
+                            </div>
+                            <div class="risk-value" id="moderateRiskCount">0</div>
+                            <div class="risk-label">Moderate Risk</div>
+                        </div>
+                        
+                        <div class="risk-card high">
+                            <div class="risk-icon">
+                                <i class="fas fa-frown"></i>
+                            </div>
+                            <div class="risk-value" id="highRiskCount">0</div>
+                            <div class="risk-label">High Risk</div>
+                        </div>
+                        
+                        <div class="risk-card total">
+                            <div class="risk-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="risk-value" id="totalCases">0</div>
+                            <div class="risk-label">Total Cases</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI Results Section -->
+                <section class="ai-results" id="aiResults">
+                    <h2 class="section-title">
+                        <i class="fas fa-brain"></i>
+                        AI Analysis Results
+                    </h2>
+                    
+                    <!-- Loading Indicator -->
+                    <div id="loadingIndicator" class="loading-container" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Analyzing with REAL Gemini AI...</div>
+                        <div class="loading-text" style="font-size: 0.875rem; margin-top: 10px;">Please wait</div>
+                    </div>
+                    
+                    <!-- Results Container -->
+                    <div id="resultsContainer" class="results-container">
+                        <!-- Conditions List -->
+                        <div class="conditions-section">
+                            <h3 style="margin-bottom: 15px;">Primary Conditions</h3>
+                            <div id="conditionsList"></div>
+                        </div>
+                        
+                        <!-- Risk Meter -->
+                        <div class="risk-meter-container">
+                            <div class="risk-meter-header">
+                                <span>Risk Level</span>
+                                <span id="riskLevelText">Moderate</span>
+                            </div>
+                            <div class="risk-meter-bar">
+                                <div class="risk-meter-fill" id="riskMeterFill" style="width: 0%; background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--gray-500);">
+                                <span>Low</span>
+                                <span>Moderate</span>
+                                <span>Critical</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Emergency Alert -->
+                        <div id="emergencyAlert" class="emergency-alert" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>🚨 EMERGENCY</h3>
+                            <p>Immediate medical attention required!</p>
+                            <button class="emergency-btn" onclick="callEmergency()" style="margin-top: 10px; padding: 10px 20px; background: var(--danger); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                <i class="fas fa-phone-alt"></i> Call Emergency (108)
+                            </button>
+                        </div>
+                        
+                        <!-- Specialist Recommendation -->
+                        <div id="specialistContainer" class="specialist-box">
+                            <strong><i class="fas fa-user-md"></i> Recommended Specialist:</strong>
+                            <span id="specialistText">General Physician</span>
+                        </div>
+                        
+                        <!-- Recommendations -->
+                        <div id="recommendationsContainer" class="recommendations-box">
+                            <strong><i class="fas fa-lightbulb"></i> Recommendations:</strong>
+                            <ul id="recommendationsList"></ul>
+                        </div>
+                        
+                        <!-- API Status -->
+                        <div id="apiStatus" class="recommendations-box" style="background: #e0f2fe; display: none;">
+                            <strong><i class="fas fa-cloud"></i> API Status:</strong>
+                            <div id="apiStatusText"></div>
+                        </div>
+                        
+                        <!-- Disclaimer -->
+                        <div id="disclaimerBox" class="disclaimer-box">
+                            <i class="fas fa-info-circle"></i>
+                            This is an AI-generated assessment. Please consult a healthcare professional for accurate diagnosis.
+                        </div>
+                    </div>
+                    
+                    <!-- No Results -->
+                    <div id="noResults" class="no-results">
+                        <i class="fas fa-stethoscope"></i>
+                        <p>Enter your symptoms and click "Analyze with AI" to get started</p>
+                    </div>
+                </section>
+
+                <!-- Triage Section -->
+                <section class="triage-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-sitemap"></i>
+                        Smart Triage Recommendations
+                    </h2>
+                    
+                    <div class="triage-options">
+                        <div class="triage-card" id="selfCareCard" onclick="selectTriage('self-care')">
+                            <div class="triage-icon">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <div class="triage-title">Self-Care</div>
+                            <div class="triage-desc">Minor symptoms, rest at home</div>
+                        </div>
+                        
+                        <div class="triage-card" id="opConsultCard" onclick="selectTriage('op-consultation')">
+                            <div class="triage-icon">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                            <div class="triage-title">OP Consultation</div>
+                            <div class="triage-desc">Book appointment within 24h</div>
+                        </div>
+                        
+                        <div class="triage-card emergency" id="emergencyCard" onclick="selectTriage('emergency')">
+                            <div class="triage-icon">
+                                <i class="fas fa-ambulance"></i>
+                            </div>
+                            <div class="triage-title">Emergency Room</div>
+                            <div class="triage-desc">Immediate care required</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Map Section (now with real map) -->
+                <section class="map-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Nearby Hospitals
+                    </h2>
+                    
+                    <div class="map-container">
+                        <div id="map"></div>
+                    </div>
+                    
+                    <div class="hospital-list" id="hospitalList"></div>
+                </section>
+
+                <!-- Debug Panel -->
+                <div class="debug-panel" id="debugPanel">
+                    <strong>🔍 Debug Info:</strong>
+                    <div id="debugContent"></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-content">
+                    <div class="emergency-contact">
+                        <div class="emergency-badge" onclick="callEmergency()">
+                            <i class="fas fa-phone-alt"></i>
+                            Emergency: 108
+                        </div>
+                        <div class="help-line">
+                            <i class="fas fa-headset"></i>
+                            Help: 1800-123-4567
+                        </div>
+                    </div>
+                    
+                    <div class="footer-links">
+                        <a onclick="showNotification('Privacy Policy', 'info')">Privacy Policy</a>
+                        <a onclick="showNotification('Terms of Use', 'info')">Terms of Use</a>
+                        <a onclick="showNotification('Contact Us', 'info')">Contact Us</a>
+                    </div>
+                    
+                    <div class="copyright">
+                        © 2024 AI Health Predictor. All rights reserved.
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Medical Reports</h3>
+                <button class="modal-close" onclick="closeModal('uploadModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" onclick="simulateFileUpload()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop your files here or click to browse</p>
+                    <p style="font-size: 0.75rem; color: var(--gray-500); margin-top: 10px;">Supported: PDF, JPG, PNG (Max 10MB)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // ===== API CONFIGURATION WITH YOUR KEYS =====
+        const config = {
+            API_KEYS: {
+                GEMINI: "AIzaSyDwW2bFvNhX5jO2Vzz93nJ1pfrtx5aJ_50",
+                RAPIDAPI: "ce9afa0f8amsh2ba909f6b22569fp1d7d6ejsn08ee92919e43"
+            },
+            API_ENDPOINTS: {
+                GEMINI: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+                MEDICAL_DIAGNOSIS: "https://ai-medical-diagnosis-api.p.rapidapi.com/analyzeSymptoms"
+            }
+        };
+
+        // ===== STATE MANAGEMENT =====
+        let currentLanguage = 'en';
+        let isListening = false;
+        let recognition = null;
+        let apiStatus = {
+            gemini: false,
+            rapid: false
+        };
+        // Global reference to the map (for flyTo)
+        let map = null;
+
+        // ===== DOM ELEMENTS =====
+        const symptomInput = document.getElementById('symptomInput');
+        const voiceBtn = document.getElementById('voiceInputBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const languageSelect = document.getElementById('languageSelect');
+        const themeToggle = document.getElementById('themeToggle');
+        const uploadReportBtn = document.getElementById('uploadReportBtn');
+        const connectWearableBtn = document.getElementById('connectWearableBtn');
+        const debugContent = document.getElementById('debugContent');
+
+        // ===== DEBUG FUNCTION =====
+        function addDebug(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            let log = `[${timestamp}] ${message}`;
+            if (data) {
+                log += `\n${JSON.stringify(data, null, 2)}`;
+            }
+            debugContent.innerHTML = log + '<br>' + debugContent.innerHTML;
+            console.log(message, data);
+        }
+
+        // ===== INITIALIZE SPEECH RECOGNITION =====
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+        }
+
+        // ===== VOICE INPUT =====
+        if (recognition) {
+            voiceBtn.addEventListener('click', () => {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                    voiceBtn.classList.add('listening');
+                    voiceBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                    showNotification('Listening... Speak now', 'info');
+                }
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                symptomInput.value = symptomInput.value ? symptomInput.value + ' ' + transcript : transcript;
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                isListening = false;
+                showNotification('Voice input captured!', 'success');
+            };
+
+            recognition.onerror = () => {
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                isListening = false;
+                showNotification('Voice recognition failed', 'error');
+            };
+
+            recognition.onend = () => {
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                isListening = false;
+            };
+        } else {
+            voiceBtn.style.display = 'none';
+        }
+
+        // ===== LANGUAGE SELECTOR =====
+        languageSelect.addEventListener('change', (e) => {
+            currentLanguage = e.target.value;
+            updateLanguage(currentLanguage);
+            
+            if (recognition) {
+                recognition.lang = currentLanguage === 'en' ? 'en-US' : 
+                                 currentLanguage === 'te' ? 'te-IN' : 'hi-IN';
+            }
+        });
+
+        function updateLanguage(lang) {
+            const translations = {
+                en: { analyze: 'Analyze with AI', upload: 'Upload Reports', wearable: 'Connect Wearable' },
+                te: { analyze: 'AI తో విశ్లేషించండి', upload: 'నివేదికలను అప్‌లోడ్ చేయండి', wearable: 'వేరబుల్‌ను కనెక్ట్ చేయండి' },
+                hi: { analyze: 'AI से विश्लेषण करें', upload: 'रिपोर्ट अपलोड करें', wearable: 'वियरेबल कनेक्ट करें' }
+            };
+            
+            analyzeBtn.innerHTML = `<i class="fas fa-robot"></i> ${translations[lang].analyze}`;
+            uploadReportBtn.innerHTML = `<i class="fas fa-upload"></i> ${translations[lang].upload}`;
+            connectWearableBtn.innerHTML = `<i class="fas fa-heart"></i> ${translations[lang].wearable}`;
+        }
+
+        // ===== THEME TOGGLE =====
+        let isDarkMode = false;
+        
+        themeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            if (isDarkMode) {
+                document.documentElement.style.setProperty('--gray-100', '#1a1a1a');
+                document.documentElement.style.setProperty('--gray-200', '#2d2d2d');
+                document.documentElement.style.setProperty('--gray-300', '#404040');
+                document.documentElement.style.setProperty('--gray-800', '#ffffff');
+                document.documentElement.style.setProperty('--white', '#2d2d2d');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                showNotification('Dark mode enabled', 'success');
+            } else {
+                document.documentElement.style.setProperty('--gray-100', '#f3f4f6');
+                document.documentElement.style.setProperty('--gray-200', '#e5e7eb');
+                document.documentElement.style.setProperty('--gray-300', '#d1d5db');
+                document.documentElement.style.setProperty('--gray-800', '#1f2937');
+                document.documentElement.style.setProperty('--white', '#ffffff');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                showNotification('Light mode enabled', 'success');
+            }
+        });
+
+        // ===== NOTIFICATION SYSTEM =====
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 
+                                     type === 'error' ? 'fa-exclamation-circle' : 
+                                     'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // ===== FIXED GEMINI API CALL =====
+        async function analyzeWithGemini(symptoms) {
+            try {
+                showNotification('Calling Gemini AI...', 'info');
+                addDebug('Calling Gemini API with symptoms: ' + symptoms);
+                
+                const response = await fetch(`${config.API_ENDPOINTS.GEMINI}?key=${config.API_KEYS.GEMINI}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `You are a medical AI assistant. Analyze these symptoms and provide a response in valid JSON format only: "${symptoms}"
+
+Required JSON structure:
+{
+  "conditions": [
+    {
+      "name": "condition name",
+      "confidence": number between 0-100,
+      "symptoms": ["matching symptom1", "matching symptom2"]
+    }
+  ],
+  "risk": {
+    "level": "Low" or "Moderate" or "Critical",
+    "percentage": number between 0-100,
+    "emergency": true or false
+  },
+  "specialist": "recommended doctor type",
+  "recommendations": ["recommendation1", "recommendation2"],
+  "triage": "self-care" or "op-consultation" or "emergency"
+}`
+                            }]
+                        }]
+                    })
+                });
+
+                addDebug('Gemini API Response Status: ' + response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                addDebug('Gemini Raw Response:', data);
+                
+                const text = data.candidates[0].content.parts[0].text;
+                addDebug('Gemini Text Response:', text);
+                
+                // Extract JSON from response
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON found in response');
+                }
+                
+                const result = JSON.parse(jsonMatch[0]);
+                addDebug('Parsed Gemini Result:', result);
+                
+                apiStatus.gemini = true;
+                showNotification('✅ Gemini AI analysis complete', 'success');
+                return result;
+                
+            } catch (error) {
+                console.error('Gemini API error:', error);
+                addDebug('Gemini API Error: ' + error.message);
+                apiStatus.gemini = false;
+                showNotification('⚠️ Gemini API failed, using backup', 'warning');
+                return null;
+            }
+        }
+
+        // ===== FIXED RAPIDAPI CALL =====
+        async function analyzeWithRapidAPI(symptoms) {
+            try {
+                showNotification('Checking with Medical API...', 'info');
+                addDebug('Calling RapidAPI with symptoms: ' + symptoms);
+                
+                const response = await fetch(config.API_ENDPOINTS.MEDICAL_DIAGNOSIS, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-RapidAPI-Key': config.API_KEYS.RAPIDAPI,
+                        'X-RapidAPI-Host': 'ai-medical-diagnosis-api.p.rapidapi.com'
+                    },
+                    body: JSON.stringify({
+                        symptoms: symptoms,
+                        language: currentLanguage
+                    })
+                });
+
+                addDebug('RapidAPI Response Status: ' + response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                addDebug('RapidAPI Response:', data);
+                
+                apiStatus.rapid = true;
+                showNotification('✅ Medical API analysis complete', 'success');
+                return data;
+                
+            } catch (error) {
+                console.error('RapidAPI error:', error);
+                addDebug('RapidAPI Error: ' + error.message);
+                apiStatus.rapid = false;
+                showNotification('⚠️ Medical API failed', 'warning');
+                return null;
+            }
+        }
+
+        // ===== ENHANCED FALLBACK ANALYSIS =====
+        function getEnhancedFallback(symptoms) {
+            addDebug('Using fallback analysis for: ' + symptoms);
+            
+            const s = symptoms.toLowerCase();
+            
+            // Define symptom patterns with medical knowledge
+            const conditions = [];
+            let riskScore = 30;
+            let isEmergency = false;
+            let specialist = 'General Physician';
+            let triage = 'self-care';
+            
+            // Chest pain - high risk
+            if (s.includes('chest') || s.includes('heart')) {
+                conditions.push({
+                    name: 'Possible Cardiac Issue',
+                    confidence: 85,
+                    symptoms: ['chest pain', 'heart-related']
+                });
+                riskScore = 85;
+                isEmergency = true;
+                specialist = 'Cardiologist';
+                triage = 'emergency';
+            }
+            
+            // Breathing issues - high risk
+            if (s.includes('breath') || s.includes('breathing') || s.includes('respiratory')) {
+                conditions.push({
+                    name: 'Respiratory Distress',
+                    confidence: 90,
+                    symptoms: ['difficulty breathing']
+                });
+                riskScore = Math.max(riskScore, 90);
+                isEmergency = true;
+                specialist = 'Pulmonologist';
+                triage = 'emergency';
+            }
+            
+            // Fever
+            if (s.includes('fever') || s.includes('temperature')) {
+                conditions.push({
+                    name: 'Fever - Possible Infection',
+                    confidence: 70,
+                    symptoms: ['fever', 'high temperature']
+                });
+                riskScore = Math.max(riskScore, 70);
+                specialist = 'General Physician';
+                triage = 'op-consultation';
+            }
+            
+            // Headache
+            if (s.includes('headache') || s.includes('migraine')) {
+                conditions.push({
+                    name: 'Headache/Migraine',
+                    confidence: 60,
+                    symptoms: ['head pain']
+                });
+                riskScore = Math.max(riskScore, 60);
+                specialist = 'Neurologist';
+                triage = riskScore > 70 ? 'emergency' : 'op-consultation';
+            }
+            
+            // Cough/Cold
+            if (s.includes('cough') || s.includes('cold') || s.includes('runny nose')) {
+                conditions.push({
+                    name: 'Upper Respiratory Infection',
+                    confidence: 50,
+                    symptoms: ['cough', 'cold symptoms']
+                });
+                specialist = 'General Physician';
+            }
+            
+            // If no conditions matched
+            if (conditions.length === 0) {
+                conditions.push({
+                    name: 'General Symptoms',
+                    confidence: 30,
+                    symptoms: ['unspecified symptoms']
+                });
+            }
+            
+            const result = {
+                conditions: conditions,
+                risk: {
+                    level: riskScore > 70 ? 'Critical' : riskScore > 40 ? 'Moderate' : 'Low',
+                    percentage: riskScore,
+                    emergency: isEmergency || riskScore > 75
+                },
+                specialist: specialist,
+                recommendations: [
+                    'Rest and stay hydrated',
+                    'Monitor your symptoms',
+                    'Avoid self-medication',
+                    'Consult a doctor if symptoms persist',
+                    'Get adequate sleep'
+                ],
+                triage: triage
+            };
+            
+            addDebug('Fallback Result:', result);
+            return result;
+        }
+
+        // ===== MAIN ANALYSIS FUNCTION - FIXED TO USE GEMINI =====
+        async function performAnalysis() {
+            const symptoms = symptomInput.value.trim();
+            
+            if (!symptoms) {
+                showNotification('Please describe your symptoms', 'error');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+            debugContent.innerHTML = ''; // Clear debug
+
+            addDebug('=== STARTING ANALYSIS ===');
+            addDebug('Symptoms: ' + symptoms);
+
+            try {
+                // Try Gemini API first
+                addDebug('Attempting Gemini API call...');
+                const geminiResult = await analyzeWithGemini(symptoms);
+                
+                let finalResult;
+                
+                if (geminiResult) {
+                    // ✅ USE GEMINI RESULT
+                    addDebug('✅ USING GEMINI AI RESULT');
+                    finalResult = geminiResult;
+                    showNotification('✅ Using REAL Gemini AI results', 'success');
+                    document.getElementById('apiStatusText').innerHTML = '✅ Using REAL Gemini AI';
+                } else {
+                    // ❌ Fallback only if Gemini fails
+                    addDebug('⚠️ Gemini failed, using fallback');
+                    finalResult = getEnhancedFallback(symptoms);
+                    showNotification('Using medical database (Gemini unavailable)', 'info');
+                    document.getElementById('apiStatusText').innerHTML = '⚠️ Using medical database';
+                }
+
+                // Display results
+                addDebug('Final Result:', finalResult);
+                displayResults(finalResult);
+                
+                // Show API status
+                document.getElementById('apiStatus').style.display = 'block';
+                
+                // Update risk dashboard
+                updateRiskDashboard(finalResult);
+                
+                // Highlight triage card
+                highlightTriageCard(finalResult.triage || 
+                    (finalResult.risk?.emergency ? 'emergency' : 
+                     finalResult.risk?.percentage > 40 ? 'op-consultation' : 'self-care'));
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                addDebug('CRITICAL ERROR: ' + error.message);
+                const fallback = getEnhancedFallback(symptoms);
+                displayResults(fallback);
+                updateRiskDashboard(fallback);
+                highlightTriageCard(fallback.triage);
+                showNotification('Using medical database', 'info');
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('resultsContainer').style.display = 'block';
+                addDebug('=== ANALYSIS COMPLETE ===');
+            }
+        }
+
+        // ===== DISPLAY RESULTS =====
+        function displayResults(result) {
+            const conditionsList = document.getElementById('conditionsList');
+            const riskMeterFill = document.getElementById('riskMeterFill');
+            const riskLevelText = document.getElementById('riskLevelText');
+            const emergencyAlert = document.getElementById('emergencyAlert');
+            const specialistText = document.getElementById('specialistText');
+            const recommendationsList = document.getElementById('recommendationsList');
+
+            // Handle different result formats
+            const conditions = result.conditions || result.primaryConditions || [];
+            const risk = result.risk || {
+                level: result.riskLevel || 'Moderate',
+                percentage: result.riskPercentage || 50,
+                emergency: result.emergency || false
+            };
+            
+            // Display conditions
+            conditionsList.innerHTML = conditions.map(condition => {
+                const name = condition.name || condition.condition || 'Unknown';
+                const confidence = condition.confidence || 50;
+                const symptoms = condition.symptoms || condition.matchingSymptoms || [];
+                const confidenceClass = confidence > 70 ? 'high' : confidence > 40 ? 'medium' : 'low';
+                
+                return `
+                    <div class="condition-item">
+                        <div class="condition-info">
+                            <div class="condition-name">${name}</div>
+                            <div class="condition-symptoms">${symptoms.join(', ') || 'General symptoms'}</div>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill ${confidenceClass}" style="width: ${confidence}%"></div>
+                        </div>
+                        <div class="confidence-value">${confidence}%</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update risk meter
+            const riskPercentage = risk.percentage || 50;
+            riskMeterFill.style.width = `${riskPercentage}%`;
+            riskLevelText.textContent = risk.level || 'Moderate';
+            
+            // Color code risk meter
+            if (riskPercentage > 70) {
+                riskMeterFill.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+            } else if (riskPercentage > 40) {
+                riskMeterFill.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+            } else {
+                riskMeterFill.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+            }
+
+            // Show/hide emergency alert
+            emergencyAlert.style.display = (risk.emergency || riskPercentage > 70) ? 'block' : 'none';
+
+            // Update specialist
+            specialistText.textContent = result.specialist || 'General Physician';
+
+            // Update recommendations
+            const recommendations = result.recommendations || [
+                'Rest and stay hydrated',
+                'Monitor your symptoms',
+                'Consult a doctor if symptoms persist'
+            ];
+            recommendationsList.innerHTML = recommendations.map(rec => `<li>${rec}</li>`).join('');
+            
+            addDebug('Results displayed successfully');
+        }
+
+        // ===== UPDATE API STATUS =====
+        function updateAPIStatus() {
+            const apiStatusDiv = document.getElementById('apiStatus');
+            const apiStatusText = document.getElementById('apiStatusText');
+            
+            const statuses = [];
+            if (apiStatus.gemini) statuses.push('✅ Gemini AI');
+            if (apiStatus.rapid) statuses.push('✅ Medical API');
+            
+            if (statuses.length > 0) {
+                apiStatusText.innerHTML = statuses.join(' • ');
+                apiStatusDiv.style.display = 'block';
+            }
+        }
+
+        // ===== UPDATE RISK DASHBOARD =====
+        function updateRiskDashboard(result) {
+            const lowCount = document.getElementById('lowRiskCount');
+            const moderateCount = document.getElementById('moderateRiskCount');
+            const highCount = document.getElementById('highRiskCount');
+            const totalCases = document.getElementById('totalCases');
+
+            let low = parseInt(lowCount.textContent) || 0;
+            let moderate = parseInt(moderateCount.textContent) || 0;
+            let high = parseInt(highCount.textContent) || 0;
+
+            const riskPercentage = result.risk?.percentage || result.riskPercentage || 50;
+            
+            if (riskPercentage < 30) {
+                low++;
+            } else if (riskPercentage < 70) {
+                moderate++;
+            } else {
+                high++;
+            }
+
+            lowCount.textContent = low;
+            moderateCount.textContent = moderate;
+            highCount.textContent = high;
+            totalCases.textContent = low + moderate + high;
+        }
+
+        // ===== HIGHLIGHT TRIAGE CARD =====
+        function highlightTriageCard(triageType) {
+            document.querySelectorAll('.triage-card').forEach(card => {
+                card.classList.remove('recommended');
+            });
+            
+            let cardId;
+            if (triageType === 'self-care') cardId = 'selfCareCard';
+            else if (triageType === 'op-consultation') cardId = 'opConsultCard';
+            else cardId = 'emergencyCard';
+            
+            document.getElementById(cardId).classList.add('recommended');
+        }
+
+        // ===== SELECT TRIAGE =====
+        function selectTriage(type) {
+            if (type === 'emergency') {
+                if (confirm('🚨 Emergency services will be notified. Continue?')) {
+                    showNotification('🚑 Emergency services contacted! Help is on the way!', 'success');
+                }
+            } else if (type === 'op-consultation') {
+                showNotification('Opening appointment booking system...', 'info');
+                setTimeout(() => {
+                    showNotification('Next available slot: Today 3:30 PM', 'success');
+                }, 1000);
+            } else {
+                showNotification('Loading self-care recommendations...', 'info');
+            }
+        }
+
+        // ===== CALL EMERGENCY =====
+        function callEmergency() {
+            if (confirm('🚨 Call emergency services (108)?')) {
+                showNotification('📞 Calling emergency services...', 'warning');
+                setTimeout(() => {
+                    showNotification('Ambulance dispatched. ETA: 8 minutes', 'success');
+                }, 2000);
+            }
+        }
+
+        // ===== REAL MAP USING LEAFLET =====
+        function initMap() {
+            const mapDiv = document.getElementById('map');
+            
+            // Default location (Chennai)
+            const defaultLat = 13.0827;
+            const defaultLng = 80.2707;
+            
+            // Try to get user's location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLng = position.coords.longitude;
+                        loadMap(userLat, userLng);
+                    },
+                    (error) => {
+                        console.warn('Geolocation failed, using default location');
+                        loadMap(defaultLat, defaultLng);
+                    }
+                );
+            } else {
+                loadMap(defaultLat, defaultLng);
+            }
+        }
+
+        function loadMap(lat, lng) {
+            const mapDiv = document.getElementById('map');
+            mapDiv.innerHTML = ''; // Clear any placeholder content
+            
+            // Initialize map and store globally
+            map = L.map('map').setView([lat, lng], 13);
+            window.currentMap = map; // for flyTo function
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Add a marker for user's location (approximate)
+            L.marker([lat, lng]).addTo(map)
+                .bindPopup('You are here')
+                .openPopup();
+            
+            // Hospital data with approximate coordinates (you can update with real lat/lon)
+            const hospitals = [
+                { name: 'Apollo Hospital', address: '21, Greams Lane, Chennai', lat: 13.0312, lng: 80.2412, status: 'open' },
+                { name: 'Fortis Malar', address: '52, Gandhi Road, Chennai', lat: 13.0345, lng: 80.2485, status: 'busy' },
+                { name: 'AIIMS', address: '110, Anna Salai, Chennai', lat: 13.0623, lng: 80.2567, status: 'open' },
+                { name: 'Global Hospital', address: '45, Mount Road, Chennai', lat: 13.0456, lng: 80.2345, status: 'open' }
+            ];
+            
+            // Add markers for each hospital
+            hospitals.forEach(hospital => {
+                const marker = L.marker([hospital.lat, hospital.lng]).addTo(map);
+                marker.bindPopup(`
+                    <b>${hospital.name}</b><br>
+                    ${hospital.address}<br>
+                    Status: <span style="color:${hospital.status === 'open' ? 'green' : 'red'}">${hospital.status}</span>
+                `);
+            });
+            
+            // Update the hospital list with distances and click handlers
+            updateHospitalListWithMap(hospitals);
+        }
+
+        // Update the hospital list with click-to-fly functionality
+        function updateHospitalListWithMap(hospitals) {
+            const hospitalList = document.getElementById('hospitalList');
+            hospitalList.innerHTML = hospitals.map(hospital => {
+                // Calculate approximate distance (you could use a proper distance function if needed)
+                const distance = (Math.random() * 5 + 1).toFixed(1) + ' km'; // placeholder
+                return `
+                    <div class="hospital-item" onclick="flyToHospital(${hospital.lat}, ${hospital.lng}, '${hospital.name}')">
+                        <div class="hospital-icon">
+                            <i class="fas fa-hospital"></i>
+                        </div>
+                        <div class="hospital-info">
+                            <div class="hospital-name">${hospital.name}</div>
+                            <div class="hospital-address">${hospital.address}</div>
+                        </div>
+                        <div class="hospital-distance">${distance}</div>
+                        <div class="hospital-status status-${hospital.status}">
+                            ${hospital.status === 'open' ? '● Open' : '● Busy'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Function to fly to a hospital marker when list item is clicked
+        function flyToHospital(lat, lng, name) {
+            if (window.currentMap) {
+                window.currentMap.flyTo([lat, lng], 16);
+                L.popup()
+                    .setLatLng([lat, lng])
+                    .setContent(`<b>${name}</b>`)
+                    .openOn(window.currentMap);
+            }
+            showNotification(`Showing ${name} on map`, 'info');
+        }
+
+        // ===== MODAL FUNCTIONS =====
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function simulateFileUpload() {
+            showNotification('Uploading report...', 'info');
+            setTimeout(() => {
+                closeModal('uploadModal');
+                showNotification('Report uploaded successfully!', 'success');
+            }, 1500);
+        }
+
+        // ===== WEARABLE SIMULATION =====
+        let wearableConnected = false;
+        let wearableInterval = null;
+
+        connectWearableBtn.addEventListener('click', () => {
+            if (!wearableConnected) {
+                wearableConnected = true;
+                connectWearableBtn.innerHTML = '<i class="fas fa-heartbeat"></i> Connected';
+                connectWearableBtn.style.background = '#10b981';
+                connectWearableBtn.style.color = 'white';
+                showNotification('Wearable device connected!', 'success');
+                
+                wearableInterval = setInterval(() => {
+                    const heartRate = Math.floor(Math.random() * (85 - 60) + 60);
+                    const spo2 = Math.floor(Math.random() * (99 - 95) + 95);
+                    showNotification(`📊 Vitals - HR: ${heartRate} BPM | SpO2: ${spo2}%`, 'info');
+                }, 30000);
+            } else {
+                wearableConnected = false;
+                clearInterval(wearableInterval);
+                connectWearableBtn.innerHTML = '<i class="fas fa-heart"></i> Connect Wearable';
+                connectWearableBtn.style.background = 'var(--white)';
+                connectWearableBtn.style.color = 'var(--gray-700)';
+                showNotification('Wearable disconnected', 'warning');
+            }
+        });
+
+        // ===== NAVIGATION =====
+        function showSection(section) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            showNotification(`Navigating to ${section}`, 'info');
+        }
+
+        // ===== EVENT LISTENERS =====
+        analyzeBtn.addEventListener('click', performAnalysis);
+        uploadReportBtn.addEventListener('click', () => openModal('uploadModal'));
+
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+
+        // Add slideOut animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ===== INITIALIZE =====
+        window.addEventListener('load', () => {
+            initMap(); // This now creates the real map
+            showNotification('🚀 AI Health Predictor ready!', 'success');
+            document.getElementById('noResults').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+            addDebug('Application initialized');
+        });
+
+        // Make functions global
+        window.showSection = showSection;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.showNotification = showNotification;
+        window.simulateFileUpload = simulateFileUpload;
+        window.selectTriage = selectTriage;
+        window.callEmergency = callEmergency;
+        window.flyToHospital = flyToHospital; // expose for onclick
+    </script>
+</body>
+</html>
